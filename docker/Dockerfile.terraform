@@ -1,0 +1,16 @@
+FROM hashicorp/terraform:1.8.5
+
+USER root
+
+RUN apk add --no-cache \
+    python3 \
+    py3-pip \
+    gcc \
+    musl-dev \
+    python3-dev \
+    libffi-dev \
+    openssl-dev \
+    cargo \
+    docker-cli
+
+RUN pip install --no-cache-dir --break-system-packages azure-cli

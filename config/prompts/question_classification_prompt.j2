@@ -1,0 +1,30 @@
+Your task is to analyze the given user question and classify it into one of the following categories:
+
+{% for faq in available_faqs %}
+{{ faq.name }}
+    {% if faq.examples|length > 1 %}Example user responses that could be classified as this intent:
+    {% for faq_example in faq.examples -%}
+    - {{ faq_example }}
+    {% endfor %}{% endif %}
+{%- endfor %}
+
+===
+
+The user just said """{{ user_message }}""".
+
+===
+
+Based on this information classify the last user response.
+
+===
+
+Ambiguity / closest-match rule:
+If the user message does not clearly and directly match a single listed intent, return not_supported_question.
+
+===
+
+Return only one intent that matches the last user response.
+Strictly adhere to the provided intents listed above.
+Only use information provided by the user.
+
+User intent:

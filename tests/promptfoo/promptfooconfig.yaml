@@ -1,0 +1,182 @@
+description: Unified and orthogonal test suite for carriage-services conversation flows
+providers:
+  - id: 'file://harness/promptfoo_test_harness.py'
+
+tests:
+  - description: "Path 1: Happy Path - Successful Booking"
+    vars:
+      conversation_turns:
+        - user: "Yes, that's me."
+          mock_llm_responses:
+            - '{"action": {"flow_name": "intro_flow", "slot_name": "confirm_identity", "slot_value": true, "action_type": "set_slot"}}'
+          assert:
+            - type: python
+              value: '"book an in-person appointment" in output[1].lower()'
+        - user: "Yes, I would like to book an appointment."
+          mock_llm_responses:
+            - '{"action": {"flow_name": "intro_flow", "slot_name": "accept_appointment", "slot_value": true, "action_type": "set_slot"}}'
+            - '{"booking_response_message": "Would you like to schedule your appointment for Wednesday, January 15 at 2:00 PM?", "appointment_datetime": null, "user_said_goodbye": false}'
+          assert:
+            - type: python
+              value: '"schedule your appointment for wednesday" in output[2].lower()'
+        - user: "Yes, that works for me."
+          mock_llm_responses:
+            - '{"action": {"user_message": "Yes, that works for me.", "action_type": "continue_flow"}}'
+            - '{"booking_response_message": "Your appointment is booked for Wednesday, January 15 at 2:00 PM. You will receive a text message with the details shortly. What else can I help you with?", "appointment_datetime": "2025-01-15T14:00:00", "user_said_goodbye": false}'
+          assert:
+            - type: python
+              value: '"appointment is booked" in output[3].lower()'
+
+  - description: "Path 2: Full Rejection Path - Correct Identity, Declines All"
+    vars:
+      conversation_turns:
+        - user: "Yes, that's me."
+          mock_llm_responses:
+            - '{"action": {"flow_name": "intro_flow", "slot_name": "confirm_identity", "slot_value": true, "action_type": "set_slot"}}'
+          assert:
+            - type: python
+              value: '"book an in-person appointment" in output[1].lower()'
+        - user: "I'm not interested."
+          mock_llm_responses:
+            - '{"action": {"flow_name": "intro_flow", "slot_name": "accept_appointment", "slot_value": false, "action_type": "set_slot"}}'
+            - '{"category": "Not Interested"}'
+          assert:
+            - type: python
+              value: '"peace of mind for your family" in output[2].lower()'
+        - user: "Still not interested."
+          mock_llm_responses:
+            - '{"action": {"flow_name": "intro_flow", "slot_name": "offer_rebuttal", "slot_value": false, "action_type": "set_slot"}}'
+          assert:
+            - type: python
+              value: '"transfer you" in output[3].lower()'
+        - user: "No thanks."
+          mock_llm_responses:
+            - '{"action": {"flow_name": "resignation_flow", "slot_name": "user_wants_human_transfer", "slot_value": false, "action_type": "set_slot"}}'
+          assert:
+            - type: python
+              value: '"attending an upcoming seminar" in output[4].lower()'
+        - user: "No."
+          mock_llm_responses:
+            - '{"action": {"flow_name": "resignation_flow", "slot_name": "attend_seminar", "slot_value": false, "action_type": "set_slot"}}'
+          assert:
+            - type: python
+              value: '"feel free to contact us if you change your mind" in output[5].lower()'
+
+  - description: "Path 3: Wrong Person Path - Denies Identity, Declines All"
+    vars:
+      conversation_turns:
+        - user: "No, that's not me."
+          mock_llm_responses:
+            - '{"action": {"flow_name": "intro_flow", "slot_name": "confirm_identity", "slot_value": false, "action_type": "set_slot"}}'
+          assert:
+            - type: python
+              value: '"have you considered your funeral preplanning options" in output[1].lower()'
+        - user: "I'm not interested."
+          mock_llm_responses:
+            - '{"action": {"flow_name": "intro_flow", "slot_name": "accept_preplanning", "slot_value": false, "action_type": "set_slot"}}'
+            - '{"category": "Not Interested"}'
+          assert:
+            - type: python
+              value: '"peace of mind for your family" in output[2].lower()'
+        - user: "No, thanks."
+          mock_llm_responses:
+            - '{"action": {"flow_name": "intro_flow", "slot_name": "offer_rebuttal", "slot_value": false, "action_type": "set_slot"}}'
+          assert:
+            - type: python
+              value: '"transfer you" in output[3].lower()'
+
+  - description: "Path 4: Question Interrupt - Asks question and returns to flow"
+    vars:
+      conversation_turns:
+        - user: "Yes, that's me."
+          mock_llm_responses:
+            - '{"action": {"flow_name": "intro_flow", "slot_name": "confirm_identity", "slot_value": true, "action_type": "set_slot"}}'
+          assert:
+            - type: python
+              value: '"book an in-person appointment" in output[1].lower()'
+        - user: "How much does a funeral cost?"
+          mock_llm_responses:
+            - '{"action": {"flow_name": "question_flow", "action_type": "start_flow"}}'
+            - '{"category": "Pricing request"}'
+          assert:
+            - type: python
+              value: '"celebrate your life" in output[2].lower() and "book an in-person appointment" in output[2].lower()'
+
+  - description: "Path 5: Direct Human Transfer - Explicit request for a person"
+    vars:
+      conversation_turns:
+        - user: "Yes, speaking."
+          mock_llm_responses:
+            - '{"action": {"flow_name": "intro_flow", "slot_name": "confirm_identity", "slot_value": true, "action_type": "set_slot"}}'
+          assert:
+            - type: python
+              value: '"book an in-person appointment" in output[1].lower()'
+        - user: "I want to speak to a real person."
+          mock_llm_responses:
+            - '{"action": {"flow_name": "global", "slot_name": "transfer_to_human", "slot_value": true, "action_type": "set_slot"}}'
+          assert:
+            - type: python
+              value: '"transferring you to one of our team members now" in output[2].lower()'
+
+  - description: "Path 6: Do Not Call - DNC request terminates call"
+    vars:
+      conversation_turns:
+        - user: "Take me off your list."
+          mock_llm_responses:
+            - '{"action": {"flow_name": "question_flow", "action_type": "start_flow"}}'
+            - '{"category": "Do not call me again"}'
+          assert:
+            - type: python
+              value: '"we will place your number on the do not call list. goodbye." in output[1].lower()'
+
+  - description: "Path 7: Resignation to Seminar - Rejects appointment but accepts seminar"
+    vars:
+      conversation_turns:
+        - user: "Yes, that is me."
+          mock_llm_responses:
+            - '{"action": {"flow_name": "intro_flow", "slot_name": "confirm_identity", "slot_value": true, "action_type": "set_slot"}}'
+          assert:
+            - type: python
+              value: '"book an in-person appointment" in output[1].lower()'
+        - user: "No, I am not interested right now."
+          mock_llm_responses:
+            - '{"action": {"flow_name": "intro_flow", "slot_name": "accept_appointment", "slot_value": false, "action_type": "set_slot"}}'
+            - '{"category": "Not Interested"}'
+          assert:
+            - type: python
+              value: '"peace of mind for your family" in output[2].lower()'
+        - user: "I am still not interested."
+          mock_llm_responses:
+            - '{"action": {"flow_name": "intro_flow", "slot_name": "offer_rebuttal", "slot_value": false, "action_type": "set_slot"}}'
+          assert:
+            - type: python
+              value: '"transfer you" in output[3].lower()'
+        - user: "No, I do not need to talk to anyone."
+          mock_llm_responses:
+            - '{"action": {"flow_name": "resignation_flow", "slot_name": "user_wants_human_transfer", "slot_value": false, "action_type": "set_slot"}}'
+          assert:
+            - type: python
+              value: '"attending an upcoming seminar" in output[4].lower()'
+        - user: "Yes, I would like to attend a seminar."
+          mock_llm_responses:
+            - '{"action": {"flow_name": "resignation_flow", "slot_name": "attend_seminar", "slot_value": true, "action_type": "set_slot"}}'
+          assert:
+            - type: python
+              value: '"ll be added to our seminar marketing list" in output[5].lower()'
+
+  - description: "Path 8: Specific Question Handoff - Price request for specific item"
+    vars:
+      conversation_turns:
+        - user: "Yes, that's me."
+          mock_llm_responses:
+            - '{"action": {"flow_name": "intro_flow", "slot_name": "confirm_identity", "slot_value": true, "action_type": "set_slot"}}'
+          assert:
+            - type: python
+              value: '"book an in-person appointment" in output[1].lower()'
+        - user: "What is the price for a mahogany casket?"
+          mock_llm_responses:
+            - '{"action": {"flow_name": "question_flow", "action_type": "start_flow"}}'
+            - '{"category": "Specific Product Price Request"}'
+          assert:
+            - type: python
+              value: '"transferring you to one of our team members" in output[2].lower()'

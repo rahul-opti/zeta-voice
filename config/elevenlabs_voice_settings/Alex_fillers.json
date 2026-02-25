@@ -1,0 +1,9 @@
+{
+  "name": "Alex fillers",
+  "description": "High stability + medium-low similarity.",
+  "stability": 1.0,
+  "similarity_boost": 0.30,
+  "style": 0.0,
+  "use_speaker_boost": false,
+  "speed": 0.85
+}

@@ -1,0 +1,23 @@
+from pathlib import Path
+
+PROJECT_PATH = Path(__file__).parent.parent.parent.absolute()
+PROMPTS_PATH = PROJECT_PATH / "config" / "prompts"
+CONVERSATION_CONFIG_PATH = PROJECT_PATH / "config" / "conversation_config"
+INTENT_CLASSIFICATION_PROMPT_PATH = PROMPTS_PATH / "intent_classification_prompt.j2"
+QUESTION_CLASSIFICATION_PROMPT_PATH = PROMPTS_PATH / "question_classification_prompt.j2"
+OBJECTION_CLASSIFICATION_PROMPT_PATH = PROMPTS_PATH / "objection_classification_prompt.j2"
+BOOKING_FLOW_PROMPT_PATH = PROMPTS_PATH / "booking_flow_prompt.j2"
+REPHRASE_PROMPT_PATH = PROMPTS_PATH / "rephrase_prompt.j2"
+SLOTS_WITH_RESPONSES_PATH = CONVERSATION_CONFIG_PATH / "slots_with_responses.csv"
+INTENT_CLASSIFICATION_FAQS_PATH = CONVERSATION_CONFIG_PATH / "faqs_with_responses.csv"
+INTENT_CLASSIFICATION_OBJECTIONS_PATH = CONVERSATION_CONFIG_PATH / "objections_with_responses.csv"
+REPETITION_UTTERANCES_PATH = CONVERSATION_CONFIG_PATH / "repetition_with_responses.csv"
+RULE_BASED_ENGLISH_RESPONSES_PATH = CONVERSATION_CONFIG_PATH / "rule_based_english_responses.csv"
+VOICEMAIL_RESPONSES_PATH = CONVERSATION_CONFIG_PATH / "voicemail_responses.csv"
+VOICEMAIL_DETECTION_PROMPT_PATH = PROMPTS_PATH / "voicemail_detection_prompt.j2"
+INTRO_MESSAGES_PATH = PROJECT_PATH / "config" / "intro_messages.json"
+ELEVENLABS_VOICES_PATH = PROJECT_PATH / "config" / "elevenlabs_voices.json"
+CONFIG_PATH = PROJECT_PATH / "config" / "example.yml"
+DATA_PATH = PROJECT_PATH / "data"
+CALL_RECORDINGS_PATH = DATA_PATH / "call_recordings"
+QUESTION_CLASSIFICATION_MODEL_PATH = PROJECT_PATH / "src" / "carriage_services" / "question_classification" / "model"

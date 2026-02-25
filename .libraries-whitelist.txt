@@ -1,0 +1,15 @@
+pkg_resources
+jeepney
+typing_extensions
+urllib3
+click
+mypy_extensions
+types-PyYAML
+attrs
+typing-inspection
+types-cffi
+types-setuptools
+jsonschema
+jsonschema-specifications
+referencing
+zipp

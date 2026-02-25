@@ -1,0 +1,9 @@
+{
+  "name": "Default",
+  "description": "Default balanced settings.",
+  "stability": 0.8,
+  "similarity_boost": 0.5,
+  "style": 0,
+  "use_speaker_boost": false,
+  "speed": 1.0
+}

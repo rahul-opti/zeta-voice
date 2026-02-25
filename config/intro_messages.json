@@ -1,0 +1,24 @@
+{
+  "versions": {
+    "default": {
+      "name": "Default intro",
+      "message": "Hello, This is BOT_NAME from FUNERAL_HOME_NAME. The reason for my call is you had previously signed up to discuss our preplanning services with our team. Am I speaking to USER_NAME?"
+    },
+    "intro_1": {
+      "name": "Intro no. 1",
+      "message": "Hello, This is BOT_NAME from FUNERAL_HOME_NAME. I'm calling because you signed up to hear more about our pre-planning services. Am I speaking to USER_NAME?"
+    },
+    "intro_2": {
+      "name": "Intro no. 2",
+      "message": "Hello, This is BOT_NAME from FUNERAL_HOME_NAME. I'm calling because you signed up to speak with our team about our pre-planning services. Am I speaking to USER_NAME?"
+    },
+    "intro_3": {
+      "name": "Intro no. 3",
+      "message": "Hello, This is BOT_NAME from FUNERAL_HOME_NAME. I'm reaching out because you expressed interest in hearing more about our pre-planning services. Am I speaking to USER_NAME?"
+    },
+    "intro_4": {
+      "name": "Intro no. 4",
+      "message": "Hello, This is BOT_NAME from FUNERAL_HOME_NAME. I'm calling because you expressed interest in learning more about our pre-planning services. Am I speaking to USER_NAME?"
+    }
+  }
+}

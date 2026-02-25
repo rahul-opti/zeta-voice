@@ -1,0 +1,132 @@
+Your task is to analyze the current conversation context and generate an action to start new business processes (flows), extract slot values, or respond to user input appropriately.
+
+## AVAILABLE FLOWS
+{% for flow in available_flows %}
+- **{{ flow.name }}**: {{ flow.description }}
+{%- endfor %}
+
+## CONVERSATION CONTEXT
+{% if conversation_history %}
+**Previous conversation:**
+{% for message in conversation_history %}
+- {{ message.role }}: {% if message.intro_content %}{{ message.intro_content }}{% endif %} {{ message.content }}
+{%- endfor %}
+{% endif %}
+
+## CURRENT STATE
+{% if current_flow != None %}
+**Current Flow**: {{ current_flow.name }}
+
+{% if current_flow.get_active_slots()|length > 0 %}
+**Active Slots (can be set):**
+{% for slot in current_flow.get_active_slots() -%}
+{% if slot.name not in ['check_time_slot_for_date', 'more_slots_available'] -%}
+- **{{ slot.name }}**: {{ slot.description }} (type: {{ slot.type }}, current: {{ slot.value }})
+{% endif -%}
+{% endfor %}
+{% else %}
+**No active slots available to set.**
+{% endif %}
+
+**Global Slots (always available):**
+{% for slot in current_flow.get_global_slots().values() -%}
+- **{{ slot.name }}**: {{ slot.description }} (type: {{ slot.type }}, current: {{ slot.value }})
+{% endfor %}
+
+{% else %}
+**No active flow** - You can only start a new flow to access its slots.
+{% endif %}
+
+## USER MESSAGE
+"""{{ user_message }}"""
+
+## AVAILABLE ACTIONS
+
+{% if current_flow != None and current_flow.name == "booking_flow" %}
+### Booking Flow Actions (Limited Set)
+- **SetSlotAction**: `set_slot(flow_name, slot_name, slot_value)` - ONLY for global slots
+  - For global slots: `set_slot("global", "slot_name", value)`
+  - Example: `set_slot("global", "transfer_to_human", True)`
+  - **IMPORTANT**: Only use for global slots (like transfer_to_human). Never set booking flow slots.
+- **StartFlowAction**: `start_flow(question_flow)` - Start question flow for questions outside booking scope
+  - Use for: General questions about services, policies, pricing, logistics, or unrelated topics
+  - Do NOT use for: Questions about available dates, booking process, or current appointment **ONLY before booking is confirmed**
+  - Do NOT use for: Objections, deflections, or reluctance, even if matched with a question (e.g., "Can you just text me? I don't have time", "do I have to come? just send me info", "can you call me later? I'm too busy") — these should be handled as objections, not as questions
+- **RepetitionAction**: `repetition(user_message)` - When user message is unintelligible
+  - Use for: Gibberish, random characters, empty strings, nonsensical content
+- **ContinueAction**: `continue_flow(user_message)` - Continue current booking flow
+  - Use for: Normal booking conversation, date/time preferences, confirmations
+  - Default behavior - use when unsure or for standard booking interactions
+
+**Important**: In booking flow, you can ONLY use these four actions. Never start booking_flow again.
+{% else %}
+### Regular Flow Actions
+- **SetSlotAction**: `set_slot(flow_name, slot_name, slot_value)`
+  - For active slots: `set_slot("{{ current_flow.name if current_flow else 'flow_name' }}", "slot_name", value)`
+  - For global slots: `set_slot("global", "slot_name", value)`
+  - Examples: `set_slot("intro_flow", "confirm_identity", True)` or `set_slot("global", "transfer_to_human", True)`
+  - **IMPORTANT**: Only set active slots that have current value of None. Never modify already set active slots.
+  - **NEVER use for greetings**: Do NOT use SetSlotAction for "hello", "hi", "hey" or similar greetings - use RepetitionAction instead
+- **StartFlowAction**: `start_flow(flow_name)` - Start a new flow
+  - Example: `start_flow(question_flow)`
+- **RepetitionAction**: `repetition(user_message)` - When user message is unintelligible
+  - Use for: Gibberish, random characters, empty strings, nonsensical content
+{% endif %}
+
+## DECISION GUIDELINES
+
+### When to Use Each Action
+1. **SetSlotAction**: When user provides clear, relevant information for an active slot (explicit yes/no answers, clear confirmations, denials, or specific information requested by the bot) OR when user explicitly requests something that matches a global slot (like transfer_to_human)
+2. **StartFlowAction**: Only when user explicitly requests something that requires a different flow
+3. **RepetitionAction**: Only for truly unintelligible input
+{% if current_flow != None and current_flow.name == "booking_flow" %}
+4. **ContinueAction**: Default choice when unsure or for normal conversation flow
+{% endif %}
+
+### Important Rules
+- **CRITICAL: Do-Not-Call Requests**: If user says anything like "don't call me again", "do not call this number", "remove me from your list", "stop calling", "take me off your list", etc., IMMEDIATELY use `start_flow(question_flow)`. This overrides all other actions.
+- **CRITICAL: Human Transfer**: If user EXPLICITLY requests to speak with a human using direct phrases like "transfer me", "talk to a human", "human consultant", "speak to someone", "I want a person", "connect me to an agent", "I need to talk to a real person", etc., IMMEDIATELY use `set_slot("global", "transfer_to_human", True)`. This overrides all other actions except do-not-call requests.
+{% if current_flow != None and current_flow.name == "booking_flow" %}
+- **CRITICAL: Post-Booking Routing**: If booking is already confirmed (bot said "I will secure your visit", "Your visit is now secured", "You'll receive a confirmation text", or similar), then:
+  - If user asks a QUESTION (e.g., "Can we customize?", "What's included?", "How much does it cost?") — including logistical questions (e.g., questions about receiving/sending confirmation details like address, directions, confirmation text, etc.) — use `start_flow(question_flow)`
+  - Otherwise (goodbye signals, confirmations, or any non-question), use `continue_flow` so booking flow can handle it (including goodbye detection)
+{% endif %}
+- **CRITICAL: Distrust vs Transfer**: Expressions of distrust, skepticism, or negative sentiment about calls/appointments (e.g., "I don't trust calls", "I'm suspicious", "this seems suspicious") should be treated as negative responses to the current question, NOT as human transfer requests, unless they explicitly ask to speak with a person.
+- **CRITICAL: Objections vs Questions**: If a user's message expresses reluctance, avoidance, or a desire to disengage — even if phrased as a request or question (e.g., "could you just send me some information? I don't have time right now", "can you email me instead? I'm busy") — treat it as an **objection/rebuttal**, NOT a question. Do NOT use `start_flow(question_flow)`. Instead, treat it as a **negative response** to accepting booking. The underlying intent is the objection (lack of time, lack of interest, etc.), and the request for information is just a polite dismissal.
+- **Conservative approach**: When in doubt, use ContinueAction or do nothing
+- **One slot at a time**: Only set one slot per action (except in booking flow)
+- **Date format**: Use 2025-MM-DD hh:mm format for dates
+- **No placeholders**: Never use abstract values or placeholders for slots
+- **User information only**: Only use information explicitly provided by the user
+- **Never modify active set slots**: Only set active slots that have current value of None. If an active slot already has a value (True/False), do NOT change it
+
+### Common Scenarios
+- **Yes/No Questions**: When bot asks a question and user responds with:
+  - **Affirmative**: "yes", "yeah", "correct", "that's right", "absolutely", "sure", "okay", "I would like that"
+  - **Negative**: "no", "nah", "not really", "I don't think so", "that's wrong", "I don't want to", "I'm not interested", "I don't want to talk about", "I don't want to discuss"
+  Use SetSlotAction to set the corresponding boolean slot
+- **CRITICAL: Identity Confirmation**: When bot asks "Is this [Name]?" or "Am I speaking with [Name]?", ONLY set confirm_identity=True for explicit confirmations like "yes", "that's me", "correct". Greetings like "hello" are NOT confirmations and should use RepetitionAction
+- **Topic-Related Refusals**: When user declines to discuss the specific topic being asked about (e.g., "I don't want to talk about death/funeral/preplanning"), treat this as a negative response to the relevant boolean slot, NOT as an out-of-scope question
+{% if current_flow != None and current_flow.name == "booking_flow" %}
+- **Conflicting information**: Use ContinueAction and let the flow handle clarification
+- **Ambiguous input**: Use ContinueAction to let the flow ask for clarification
+{% else %}
+- **Conflicting information**: Use RepetitionAction and let the flow handle clarification
+- **Ambiguous input**: Use RepetitionAction to let the flow handle clarification
+{% endif %}
+- **Multiple requests**: Focus on the most recent or primary request
+- **Out-of-scope questions**: Use StartFlowAction to start question_flow ONLY for actual questions about topics not related to the current conversation (e.g., asking about services, policies, pricing). Do NOT use for topic refusals or declining to discuss the current subject
+- **Objections disguised as questions**: Messages like "could you just send me some information? I don't have time right now" or "can you email me instead? I'm too busy" are **objections**, not questions — treat as a negative response to accepting booking. Do NOT use `start_flow(question_flow)`.
+- **Rebuttal responses**: When `offer_rebuttal` is the currently active slot and the user raises an objection (in response to a previous rebuttal), use `SetSlotAction` to set `offer_rebuttal`. Do NOT start question_flow for rebuttal responses that are not genuine questions.
+
+- **Rebuttal examples**:
+  - Age concerns: "I'm too young to be thinking about this", "I feel like I'm too young", "We're too young to plan for this", "This is for older people", "We have plenty of time", "We're not old enough to worry about this yet"
+  - Financial concerns: "I can't afford it", "I can't afford to think about this right now", "Money is tight right now", "We're on a budget and can't afford this", "This is too expensive for us", "We can't afford your prices"
+  - Discomfort: "I don't want to talk about death or cemeteries right now", "This is too depressing to discuss", "I'm not comfortable talking about this subject", "This conversation is making me uncomfortable", "This feels too morbid"
+  - Necessity: "I don't think we need to plan ahead; we can deal with it later", "Why do we need to plan for this now?", "It's not urgent; we have time", "This isn't something we need to worry about yet"
+  - Interest: "I'm not interested", "No thank you", "We're not interested right now", "I'll pass on this"
+  - Lack of time / deflection: "I'm too busy to talk about this right now", "I don't have time for this", "Could you just send me some information? I don't have time right now", "Can you email me instead? I'm too busy", "Just send me something in the mail", "This isn't a good time for me"
+  - Other: "I need to talk to my family first", "There are too many options; I can't deal with this right now", "I don't trust unsolicited calls"
+## YOUR ACTION
+
+Based on the user's message and current context, choose the most appropriate action:

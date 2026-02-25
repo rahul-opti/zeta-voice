@@ -1,0 +1,25 @@
+Your task is to analyze the given user objection and classify it into one of the following categories:
+
+{% for objection in available_objections %}
+{{ objection.name }}
+    {% if objection.examples|length > 1 %}Example user responses that could be classified as this intent:
+    {% for objection_example in objection.examples -%}
+    - {{ objection_example }}
+    {% endfor %}{% endif %}
+{%- endfor %}
+
+===
+
+The user just said """{{ user_message }}""".
+
+===
+
+Based on this information classify the last user response.
+
+===
+
+Return only one intent that matches the last user response.
+Strictly adhere to the provided intents listed above.
+Only use information provided by the user.
+
+User intent:

@@ -1,0 +1,258 @@
+[project]
+name = "carriage_services"
+version = "0.1.0"
+description = "Voice AI Agent making outbound calls to potential leads"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "LicenseRef-Proprietary"
+license-files = ["LICENSE.md"]
+authors = [{ name = "deepsense.ai", email = "contact@deepsense.ai" }]
+classifiers = [
+    "Development Status :: 1 - Planning",
+    "Environment :: Console",
+    "Environment :: GPU :: NVIDIA CUDA",
+    "Intended Audience :: Science/Research",
+    "License :: Other/Proprietary License",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Private :: Do Not Upload"
+]
+dependencies = [
+    "click>=8.1.8",
+    "fastapi>=0.111.0",
+    "uvicorn[standard]>=0.30.0",
+    "twilio>=9.2.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.3.0",
+    "loguru>=0.7.2",
+    "aiohttp>=3.9.5",
+    "PyYAML>=6.0.1",
+    "python-multipart>=0.0.20",
+    "sqlalchemy>=2.0.41",
+    "pandas>=2.3.0",
+    "jinja2>=3.1.6",
+    "openai>=1.93.0",
+    "psycopg[binary]>=3.2.9",
+    "litellm>=1.73.6.post1",
+    "pandas>=2.3.1",
+    "requests>=2.32.4",
+    "presidio-analyzer>=2.2.359",
+    "presidio-anonymizer>=2.2.359",
+    "azure-mgmt-appcontainers>=3.2.0",
+    "azure-identity>=1.23.1",
+    "azure-storage-blob>=12.26.0",
+    "pydub>=0.25.1",
+    "elevenlabs>=2.14.0",
+    "transformers>=4.56.1",
+    "torch>=2.8.0",
+    "num2words>=0.5.14",
+]
+
+
+[project.optional-dependencies]
+dev = [
+    "pre-commit>=4.1.0",
+    "mypy>=1.10.0",
+    "ruff>=0.4.0",
+    "pip-licenses>=4.0.0,<5.0.0",
+    "types-pyyaml>=6.0.12.20240311",
+    "types-requests>=2.32.0",
+    "pytest>=8.4.1",
+    "pytest-asyncio>=1.1.0",
+]
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+
+[project.scripts]
+serve = "carriage_services.main:telephony"
+admin = "carriage_services.main:admin"
+
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/carriage_services"]
+
+[tool.pytest]
+norecursedirs = [
+    '.git',
+    '.tox',
+    '.env',
+    'dist',
+    'build',
+    'migrations',
+    'docker',
+    'config',
+    'notebooks',
+    'research',
+]
+python_files = ['test_*.py']
+addopts = [
+    '-ra',
+    '--showlocals',
+    '--strict-markers',
+    '--ignore=docs/conf.py',
+    '--ignore=setup.py',
+    '--ignore=ci',
+    '--ignore=.eggs',
+    '--doctest-modules',
+    '--doctest-glob=\*.rst',
+    '--tb=short',
+]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.mypy]
+warn_unused_configs = true
+ignore_missing_imports = true
+warn_unused_ignores = false
+show_error_codes = true
+check_untyped_defs = true
+no_implicit_optional = true
+explicit_package_bases = true
+mypy_path = "src"
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = "carriage_services.*"
+ignore_missing_imports = false
+disallow_untyped_defs = true
+
+[tool.ruff]
+exclude = [".venv"]
+extend-include = ["*.ipynb"]
+line-length = 120
+
+[tool.ruff.lint]
+preview = true
+explicit-preview-rules = true
+select = [
+    "E",
+    "F",
+    "C4",
+    "C90",
+    "D",
+    "I",
+    "PT",
+    "PL",
+    "SIM",
+    "UP",
+    "W",
+    "S",
+    "ANN",
+    "B",
+    "NPY",
+]
+extend-select = [
+    "RUF022",
+    "PLR6301",
+]
+ignore = [
+    "B024",
+    "B028",
+    "C901",
+    "D100",
+    "D104",
+    "D105",
+    "D107",
+    "D415",
+    "D200",
+    "D205",
+    "D212",
+    "ANN002",
+    "ANN003",
+    "ANN204",
+    "ANN401",
+    "PLR0913",
+    "PLR2004",
+    "PLR0911",
+    "S311",
+]
+
+[tool.ruff.lint.pylint]
+max-locals = 20
+max-branches = 15
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"*.ipynb" = [
+    "PLR2004",
+    "W293",
+    "D101",
+    "D102",
+    "D103",
+    "D107"
+]
+"tests/**/*.py" = [
+    "S101",
+    "ARG",
+    "D101",
+    "D102",
+    "D103",
+    "PT011",
+    "ANN201",
+    "PLR2004",
+]
+
+[tool.ruff.format]
+docstring-code-format = true
+docstring-code-line-length = 120
+
+
+
+[tool.ruff.lint.isort]
+known-first-party = ["carriage_services"]
+known-third-party = [
+    "IPython",
+    "PIL",
+    "cv2",
+    "dotenv",
+    "editdistance",
+    "fastapi",
+    "fire",
+    "hydra",
+    "joblib",
+    "loguru",
+    "luigi",
+    "matplotlib",
+    "neptune",
+    "neptune_config",
+    "nltk",
+    "numpy",
+    "omegaconf",
+    "pandas",
+    "pqdm",
+    "pydantic",
+    "pytest",
+    "pytorch_lightning",
+    "requests",
+    "scipy",
+    "setuptools",
+    "shapely",
+    "skimage",
+    "sklearn",
+    "streamlit",
+    "torch",
+    "torchvision",
+    "tqdm",
+    "typer",
+    "twilio",
+    "uvicorn",
+]

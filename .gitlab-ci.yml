@@ -1,0 +1,245 @@
+# --- Global Settings ---
+default:
+  tags:
+    - privileged
+
+variables:
+  # Global, non-environment-specific variables
+  PYTHON_DOCKER_IMAGE: python:3.12
+  DOCKER_IMAGE_TAG: $CI_COMMIT_SHORT_SHA
+
+  # Terraform variables sourced from GitLab CI/CD Settings.
+  # Environment-specific values (e.g., TF_VAR_resource_group_name) will be
+  # pulled based on the job's 'environment:name'.
+  TF_VAR_client_id: $ARM_CLIENT_ID
+  TF_VAR_tenant_id: $ARM_TENANT_ID
+  TF_VAR_client_secret: $ARM_CLIENT_SECRET
+  TF_VAR_subscription_id: $ARM_SUBSCRIPTION_ID
+  TF_VAR_twilio_phone_number: $TWILIO_PHONE_NUMBER
+  TF_VAR_twilio_phone_numbers: $TWILIO_PHONE_NUMBERS
+  TF_VAR_openai_api_key: $OPENAI_API_KEY
+  TF_VAR_elevenlabs_api_key: $ELEVENLABS_API_KEY
+  TF_VAR_tts_provider: $TTS_PROVIDER
+  TF_VAR_static_recordings_dir: $STATIC_RECORDINGS_DIR
+  TF_VAR_twilio_account_sid: $TWILIO_ACCOUNT_SID
+  TF_VAR_twilio_auth_token: $TWILIO_AUTH_TOKEN
+  TF_VAR_image_tag: ${DOCKER_IMAGE_TAG}
+  TF_VAR_base_url: $BASE_URL
+  TF_VAR_admin_api_key: $ADMIN_API_KEY
+  TF_VAR_user_api_key: $USER_API_KEY
+  TF_VAR_resource_group_name: $TF_RESOURCE_GROUP_NAME
+  TF_VAR_app_name: $APP_NAME
+  TF_VAR_dynamics_api_url: $DYNAMICS_API_URL
+  TF_VAR_dynamics_tenant_id: $DYNAMICS_TENANT_ID
+  TF_VAR_dynamics_client_id: $DYNAMICS_CLIENT_ID
+  TF_VAR_dynamics_client_secret: $DYNAMICS_CLIENT_SECRET
+
+
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: always
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_BRANCH == "deploy"'
+    - if: '$CI_MERGE_REQUEST_IID'
+
+stages:
+  - lint
+  - tests
+  - deploy_plan
+  - provision_acr
+  - build
+  - deploy_services
+  - promptfoo_tests
+
+# --- Reusable Job Templates ---
+.terraform_job_template:
+  image:
+    name: registry.gitlab.com/deepsense.ai/g-axia-ai/carriage-services/terraformazuredocker:0.0.1
+    entrypoint: [""]
+  before_script:
+    - az login --service-principal -u "$ARM_CLIENT_ID" -p "$ARM_CLIENT_SECRET" --tenant "$ARM_TENANT_ID"
+    - cd tf
+    - |
+      terraform init \
+        -backend-config="resource_group_name=$TF_RESOURCE_GROUP_NAME" \
+        -backend-config="storage_account_name=$TF_STORAGE_ACCOUNT_NAME" \
+        -backend-config="container_name=tfstate" \
+        -backend-config="key=terraform.tfstate"
+
+# --- Universal Jobs (Lint, Test) ---
+lint:
+  stage: lint
+  image: $PYTHON_DOCKER_IMAGE
+  before_script:
+    - apt-get update && apt-get install -y curl
+    - curl -fsSL https://astral.sh/uv/install.sh | sh
+    - export PATH="$HOME/.local/bin:$PATH"
+  script:
+    - uv venv
+    - uv pip install -e ".[dev]"
+    - uv run pre-commit run --all-files --show-diff-on-failure --color always
+    - uv run ./check_licenses.sh
+  rules:
+    - if: '$SCHEDULED == "TRUE"'
+      when: never
+    - when: always
+
+tests:
+  stage: tests
+  image: $PYTHON_DOCKER_IMAGE
+  before_script:
+    - apt-get update && apt-get install -y curl
+    - curl -fsSL https://astral.sh/uv/install.sh | sh
+    - export PATH="$HOME/.local/bin:$PATH"
+  script:
+    - uv venv
+    - uv pip install -e ".[dev]"
+    - uv run python -m ensurepip
+    - uv run python -m spacy download en_core_web_lg
+    - uv run pytest tests/e2e/test_conversation_mocked.py tests/e2e/test_conversation.py tests/unit --log-cli-level=INFO --capture=tee-sys --junitxml=report.xml
+  artifacts:
+    when: always
+    reports:
+      junit: report.xml
+  rules:
+    - if: '$SCHEDULED == "TRUE"'
+      when: never
+    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"'
+      when: never
+    - when: always
+
+# --- Dynamic Deployment Jobs ---
+deploy_plan:
+  stage: deploy_plan
+  extends: .terraform_job_template
+  script:
+    - terraform plan -out=tfplan
+    - terraform show -no-color tfplan > tfplan.txt
+  rules:
+    - if: '$SCHEDULED == "TRUE"'
+      when: never
+    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "deploy"'
+      variables:
+        CI_ENVIRONMENT_NAME: release
+    - if: '$CI_MERGE_REQUEST_IID'
+      when: always
+  allow_failure: false
+
+provision_acr:
+  stage: provision_acr
+  extends: .terraform_job_template
+  environment:
+    name: $CI_ENVIRONMENT_NAME
+  script:
+    - |
+      # Check if ACR exists in state, if not try to import it
+      if ! terraform state show azurerm_container_registry.main > /dev/null 2>&1; then
+        ACR_NAME=$(echo "${TF_VAR_app_name}" | tr -d '-')
+        ACR_ID="/subscriptions/${ARM_SUBSCRIPTION_ID}/resourceGroups/${TF_VAR_resource_group_name}/providers/Microsoft.ContainerRegistry/registries/${ACR_NAME}"
+        echo "ACR not in state, attempting to import from ${ACR_ID}"
+        terraform import azurerm_container_registry.main "${ACR_ID}" || echo "Import failed, will try to create"
+      fi
+    - terraform apply -target=azurerm_container_registry.main -auto-approve
+    - echo "TF_VAR_acr_login_server=$(terraform output -raw acr_login_server)" > ../build.env
+  artifacts:
+    reports:
+      dotenv: build.env
+  rules:
+    # Must be first rule: only run on protected branches
+    - if: '$SCHEDULED == "TRUE"'
+      when: never
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      variables:
+        CI_ENVIRONMENT_NAME: testing
+    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"'
+      variables:
+        CI_ENVIRONMENT_NAME: testing
+    - if: '$CI_COMMIT_BRANCH == "deploy"'
+      variables:
+        CI_ENVIRONMENT_NAME: release
+
+build_image:
+  stage: build
+  image:
+    name: registry.gitlab.com/deepsense.ai/g-axia-ai/carriage-services/terraformazuredocker:0.0.1
+    entrypoint: [""]
+  services:
+    - docker:dind
+  needs:
+    - provision_acr
+  environment:
+    name: $CI_ENVIRONMENT_NAME
+  before_script:
+    - az login --service-principal -u "$ARM_CLIENT_ID" -p "$ARM_CLIENT_SECRET" --tenant "$ARM_TENANT_ID"
+    - az acr login --name "$TF_VAR_acr_login_server"
+  script:
+    - echo "Building and pushing image for $CI_ENVIRONMENT_NAME environment"
+    - docker build -f docker/Dockerfile -t ${TF_VAR_acr_login_server}/${TF_VAR_resource_group_name}:${DOCKER_IMAGE_TAG} .
+    - docker push ${TF_VAR_acr_login_server}/${TF_VAR_resource_group_name}:${DOCKER_IMAGE_TAG}
+  rules:
+    - if: '$SCHEDULED == "TRUE"'
+      when: never
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      variables:
+        CI_ENVIRONMENT_NAME: testing
+    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"'
+      variables:
+        CI_ENVIRONMENT_NAME: testing
+    - if: '$CI_COMMIT_BRANCH == "deploy"'
+      variables:
+        CI_ENVIRONMENT_NAME: release
+
+deploy_services:
+  stage: deploy_services
+  extends: .terraform_job_template
+  needs:
+    - build_image
+  environment:
+    name: $CI_ENVIRONMENT_NAME
+  script:
+    - terraform apply -auto-approve
+    - echo "$CI_ENVIRONMENT_NAME Main app URL:" $(terraform output -raw container_app_url)
+    - echo "$CI_ENVIRONMENT_NAME Admin app URL:" $(terraform output -raw admin_app_url)
+  rules:
+    # Must be first rule: only run on protected branches
+    - if: '$CI_COMMIT_REF_PROTECTED != "true"'
+      when: never
+    - if: '$SCHEDULED == "TRUE"'
+      when: never
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      variables:
+        CI_ENVIRONMENT_NAME: testing
+    - if: '$CI_COMMIT_BRANCH == "deploy"'
+      variables:
+        CI_ENVIRONMENT_NAME: release
+
+# # --- Post-Deployment Jobs ---
+promptfoo_tests:
+  stage: promptfoo_tests
+  image: node:24
+  before_script:
+    - apt-get update && apt-get install -y curl
+    - curl -fsSL https://astral.sh/uv/install.sh | sh
+    - export PATH="$HOME/.local/bin:$PATH"
+  script:
+    - uv venv
+    - uv pip install -e ".[dev]"
+    - uv run npx promptfoo@latest eval -c tests/promptfoo/promptfooconfig.yaml --share -o output_promptfoo_results.json || true
+  cache:
+    key:
+      files:
+        - config/prompts/**/*
+    paths:
+      - .promptfoo/cache
+  artifacts:
+    paths:
+      - output_promptfoo_results.json
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule" && $SCHEDULED == "TRUE"'
+      when: always
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "deploy"'
+      when: always
+    - if: '$CI_MERGE_REQUEST_IID'
+      when: manual
+      allow_failure: true
