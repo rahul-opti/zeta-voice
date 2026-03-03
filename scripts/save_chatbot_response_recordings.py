@@ -51,8 +51,8 @@ async def process_responses_async(
 )
 @click.option(
     "--max-concurrent",
-    default=30,
-    help="Maximum number of concurrent requests to TTS API. Defaults to 30.",
+    default=5,
+    help="Maximum number of concurrent requests to TTS API (ElevenLabs free/creator tiers max at 10-15). Defaults to 5.",
 )
 @click.option(
     "--skip-fillers",

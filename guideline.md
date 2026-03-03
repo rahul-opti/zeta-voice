@@ -16,15 +16,16 @@
 6. [Environment Variables (.env)](#6-environment-variables-env)
 7. [Download ML Models](#7-download-ml-models)
 8. [Create Runtime Directories](#8-create-runtime-directories)
-9. [Start Services with tmux](#9-start-services-with-tmux)
-10. [Nginx Reverse Proxy](#10-nginx-reverse-proxy)
-11. [HTTPS with Let's Encrypt (Recommended)](#11-https-with-lets-encrypt-recommended)
-12. [AWS S3 Bucket Permissions](#12-aws-s3-bucket-permissions)
-13. [Twilio Webhook Configuration](#13-twilio-webhook-configuration)
-14. [Smoke Tests](#14-smoke-tests)
-15. [Updating the App (Re-deploy)](#15-updating-the-app-re-deploy)
-16. [tmux Quick Reference](#16-tmux-quick-reference)
-17. [Troubleshooting](#17-troubleshooting)
+9. [Configure Voices & Generate Audio](#9-configure-voices--generate-audio)
+10. [Start Services with tmux](#10-start-services-with-tmux)
+11. [Nginx Reverse Proxy](#11-nginx-reverse-proxy)
+12. [HTTPS with Let's Encrypt (Recommended)](#12-https-with-lets-encrypt-recommended)
+13. [AWS S3 Bucket Permissions](#13-aws-s3-bucket-permissions)
+14. [Twilio Webhook Configuration](#14-twilio-webhook-configuration)
+15. [Smoke Tests](#15-smoke-tests)
+16. [Updating the App (Re-deploy)](#16-updating-the-app-re-deploy)
+17. [tmux Quick Reference](#17-tmux-quick-reference)
+18. [Troubleshooting](#18-troubleshooting)
 
 ---
 
@@ -218,7 +219,25 @@ mkdir -p /home/ubuntu/app/zeta-voice/logs
 
 ---
 
-## 9. Start Services with tmux
+## 9. Configure Voices & Generate Audio
+
+Before starting the app, generate your static chatbot audio files for ElevenLabs:
+
+1. **Add your Voice IDs** to `config/elevenlabs_voices.json`.
+2. **Add Custom Voice Tuning**: Create a base tuning file (e.g. `config/elevenlabs_voice_settings/Eve.json`) and a fillers tuning file (`config/elevenlabs_voice_settings/Eve_fillers.json`) for your new voice to configure stability, speed, and style.
+3. **Generate Audio**: Run the script for each installed voice:
+   ```bash
+   cd /home/ubuntu/app/zeta-voice
+   uv run scripts/generate_all_recordings.py --voice-name Eve
+   ```
+4. **Sync to S3**: Upload the generated `.wav` files directly to AWS:
+   ```bash
+   aws s3 sync data/static_recordings/ s3://voice-11labs/ --acl public-read
+   ```
+
+---
+
+## 10. Start Services with tmux
 
 This project uses **tmux** to run both services in persistent background sessions.
 
@@ -265,7 +284,7 @@ crontab -e
 
 ---
 
-## 10. Nginx Reverse Proxy
+## 11. Nginx Reverse Proxy
 
 ```bash
 mkdir -p /home/ubuntu/nginx
@@ -286,7 +305,7 @@ Test: `curl http://<your-ec2-public-ip>/` — you should get a JSON response.
 
 ---
 
-## 11. HTTPS with Let's Encrypt (Recommended)
+## 12. HTTPS with Let's Encrypt (Recommended)
 
 Twilio requires HTTPS in production.
 
@@ -298,7 +317,7 @@ sudo systemctl enable certbot.timer
 
 ---
 
-## 12. AWS S3 Bucket Permissions
+## 13. AWS S3 Bucket Permissions
 
 Your buckets must allow public read so Twilio can fetch audio. Run from your local machine or the EC2 instance (with `awscli` installed):
 
@@ -321,7 +340,7 @@ done
 
 ---
 
-## 13. Twilio Webhook Configuration
+## 14. Twilio Webhook Configuration
 
 In **Twilio Console → Phone Numbers → your number → Voice**:
 
@@ -332,7 +351,7 @@ In **Twilio Console → Phone Numbers → your number → Voice**:
 
 ---
 
-## 14. Smoke Tests
+## 15. Smoke Tests
 
 ```bash
 # Are tmux windows running?
@@ -355,7 +374,7 @@ PY
 
 ---
 
-## 15. Updating the App (Re-deploy)
+## 16. Updating the App (Re-deploy)
 
 ```bash
 cd /home/ubuntu/app/zeta-voice
@@ -372,7 +391,7 @@ sudo bash deploy/deploy.sh
 
 ---
 
-## 16. tmux Quick Reference
+## 17. tmux Quick Reference
 
 | Action | Command |
 |---|---|
@@ -389,7 +408,7 @@ sudo bash deploy/deploy.sh
 
 ---
 
-## 17. Troubleshooting
+## 18. Troubleshooting
 
 | Symptom | Action |
 |---|---|
@@ -397,7 +416,7 @@ sudo bash deploy/deploy.sh
 | Window 0/1 exited immediately | `tmux attach -t zeta-voice` → switch to dead window → scroll up to see error |
 | `ModuleNotFoundError: zeta_voice` | `uv pip install --python .venv/bin/python -e .` |
 | `AWS credentials not found` | Set keys in `.env` or attach IAM Role to EC2 instance |
-| `S3 upload fails (Access Denied)` | Re-run bucket policy commands in [Step 12](#12-aws-s3-bucket-permissions) |
+| `S3 upload fails (Access Denied)` | Re-run bucket policy commands in [Step 13](#13-aws-s3-bucket-permissions) |
 | 502 Bad Gateway | Uvicorn crashed — attach to session and check `logs/app.log` |
 | Twilio "Invalid application" | Ensure `BASE_URL` in `.env` matches your HTTPS domain exactly |
 | Port 8000 not reachable externally | Expected — EC2 SG should block 8000/8001; use Nginx on port 80/443 |
