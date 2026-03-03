@@ -109,7 +109,7 @@ SQL
 ## 4. Clone the Repository
 
 ```bash
-mkdir -p /opt/zeta-voice && cd /opt/zeta-voice
+mkdir -p /home/ubuntu/app/zeta-voice && cd /home/ubuntu/app/zeta-voice
 
 git clone git@github.com:rahul-opti/voice-ai-test.git .
 ```
@@ -121,13 +121,14 @@ git clone git@github.com:rahul-opti/voice-ai-test.git .
 ## 5. Python Environment & Dependencies
 
 ```bash
-cd /opt/zeta-voice
+cd /home/ubuntu/app/zeta-voice
 
-# Create virtual environment with Python 3.12
-uv venv --python 3.12 .venv
+# Create virtual environment with Python 3.12 (with pip seeded for spacy download)
+uv venv --python 3.12 --seed .venv
 
-# Install app and all dependencies
+# Install app, all dependencies, and required runtime modules
 uv pip install --python .venv/bin/python -e .
+uv pip install msal
 
 # Verify
 .venv/bin/python -c "import zeta_voice; print('✓ Package installed')"
@@ -138,8 +139,8 @@ uv pip install --python .venv/bin/python -e .
 ## 6. Environment Variables (.env)
 
 ```bash
-cp /opt/zeta-voice/.env.example /opt/zeta-voice/.env
-nano /opt/zeta-voice/.env
+cp /home/ubuntu/app/zeta-voice/.env.example /home/ubuntu/app/zeta-voice/.env
+nano /home/ubuntu/app/zeta-voice/.env
 ```
 
 Fill in these values:
@@ -178,7 +179,7 @@ USER_API_KEY="generate-a-strong-random-key"
 ```
 
 ```bash
-chmod 600 /opt/zeta-voice/.env
+chmod 600 /home/ubuntu/app/zeta-voice/.env
 ```
 
 ---
@@ -188,12 +189,13 @@ chmod 600 /opt/zeta-voice/.env
 One-time downloads (~500 MB). Allow 5–15 minutes:
 
 ```bash
-cd /opt/zeta-voice
+cd /home/ubuntu/app/zeta-voice
 
 # spaCy NLP model
 .venv/bin/python -m spacy download en_core_web_lg
 
 # Question-vs-statement transformer model (cached to disk)
+# Note: You can safely ignore any "UNEXPECTED" warnings about `bert.embeddings.position_ids` during download.
 .venv/bin/python - <<'PY'
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 MODEL_ID = "shahrukhx01/question-vs-statement-classifier"
@@ -209,9 +211,9 @@ PY
 ## 8. Create Runtime Directories
 
 ```bash
-mkdir -p /opt/zeta-voice/data/dynamic_recordings
-mkdir -p /opt/zeta-voice/data/static_recordings
-mkdir -p /opt/zeta-voice/logs
+mkdir -p /home/ubuntu/app/zeta-voice/data/dynamic_recordings
+mkdir -p /home/ubuntu/app/zeta-voice/data/static_recordings
+mkdir -p /home/ubuntu/app/zeta-voice/logs
 ```
 
 ---
@@ -223,7 +225,7 @@ This project uses **tmux** to run both services in persistent background session
 ### Start (first time or after a reboot)
 
 ```bash
-cd /opt/zeta-voice
+cd /home/ubuntu/app/zeta-voice
 bash deploy/tmux-start.sh
 ```
 
@@ -258,7 +260,7 @@ bash deploy/tmux-restart.sh
 ```bash
 crontab -e
 # Add this line:
-@reboot sleep 15 && cd /opt/zeta-voice && bash deploy/tmux-start.sh >> /opt/zeta-voice/logs/boot.log 2>&1
+@reboot sleep 15 && cd /home/ubuntu/app/zeta-voice && bash deploy/tmux-start.sh >> /home/ubuntu/app/zeta-voice/logs/boot.log 2>&1
 ```
 
 ---
@@ -266,14 +268,15 @@ crontab -e
 ## 10. Nginx Reverse Proxy
 
 ```bash
-sudo cp /opt/zeta-voice/deploy/nginx.conf /etc/nginx/sites-available/zeta-voice
+mkdir -p /home/ubuntu/nginx
+cp /home/ubuntu/app/zeta-voice/deploy/nginx.conf /home/ubuntu/nginx/zeta-voice.conf
 
 # Set your domain
-sudo nano /etc/nginx/sites-available/zeta-voice
+nano /home/ubuntu/nginx/zeta-voice.conf
 # Change:  server_name _;
 # To:      server_name your-domain.com;
 
-sudo ln -sf /etc/nginx/sites-available/zeta-voice /etc/nginx/sites-enabled/zeta-voice
+sudo ln -sf /home/ubuntu/nginx/zeta-voice.conf /etc/nginx/sites-enabled/zeta-voice
 sudo rm -f /etc/nginx/sites-enabled/default
 
 sudo nginx -t && sudo systemctl reload nginx && sudo systemctl enable nginx
@@ -342,7 +345,7 @@ curl -s http://localhost:8000/health
 curl -s https://your-domain.com/health
 
 # S3 connectivity
-cd /opt/zeta-voice && .venv/bin/python - <<'PY'
+cd /home/ubuntu/app/zeta-voice && .venv/bin/python - <<'PY'
 import boto3
 s3 = boto3.client("s3", region_name="eu-central-1")
 buckets = [b["Name"] for b in s3.list_buckets()["Buckets"]]
@@ -355,7 +358,7 @@ PY
 ## 15. Updating the App (Re-deploy)
 
 ```bash
-cd /opt/zeta-voice
+cd /home/ubuntu/app/zeta-voice
 git pull origin main
 uv pip install --python .venv/bin/python -e .   # only needed if deps changed
 bash deploy/tmux-restart.sh
@@ -403,14 +406,18 @@ sudo bash deploy/deploy.sh
 
 ```bash
 # View last 100 lines of app log
-tail -100 /opt/zeta-voice/logs/app.log
+tail -100 /home/ubuntu/app/zeta-voice/logs/app.log
 
 # Attach and go straight to logs window
 tmux attach -t zeta-voice \; select-window -t logs
 
 # Run a one-off script inside the venv
-cd /opt/zeta-voice && .venv/bin/python scripts/generate_all_recordings.py
+cd /home/ubuntu/app/zeta-voice && .venv/bin/python scripts/generate_all_recordings.py
 
 # Check what's listening on which port
 sudo ss -tlpn | grep -E '8000|8001|80|443'
+
+# Run the app directly in the foreground (without tmux)
+cd /home/ubuntu/app/zeta-voice
+source .env && .venv/bin/python -m uvicorn zeta_voice.main:app --host 0.0.0.0 --port 8000 --workers 1 --log-level info
 ```
