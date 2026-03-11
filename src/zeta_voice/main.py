@@ -41,16 +41,16 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     print("Application shutting down.")
 
 
-app = FastAPI(title="Zeta Voice - Twilio Voice Agent", lifespan=lifespan, docs_url=None)
+app = FastAPI(title="Zeta Voice - Twilio Voice Agent", lifespan=lifespan)
 app.include_router(app_router)
 app.include_router(lead_extraction_router)
 
 templates_dir = Path(__file__).parent / "templates"
 templates = Jinja2Templates(directory=str(templates_dir))
 
-@app.get("/docs", include_in_schema=False, response_class=HTMLResponse)
-async def custom_docs(request: Request):
-    return templates.TemplateResponse("docs.html", {"request": request, "title": app.title, "openapi_url": app.openapi_url})
+@app.get("/lead-call", include_in_schema=False, response_class=HTMLResponse)
+async def lead_call_ui(request: Request):
+    return templates.TemplateResponse("lead_call.html", {"request": request})
 
 admin_app = FastAPI(title="Zeta Voice - Admin", dependencies=[Depends(admin_api_key_auth)])
 admin_app.include_router(admin_router)

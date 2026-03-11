@@ -2,9 +2,7 @@
 <html>
 
 <head>
-    <title>{{ title }} - Swagger UI</title>
-    <!-- Swagger UI CSS -->
-    <link type="text/css" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.9.0/swagger-ui.css">
+    <title>Zeta Voice - Lead Extraction</title>
     <style>
         body {
             margin: 0;
@@ -15,49 +13,79 @@
 
         .custom-lead-ui {
             padding: 20px;
-            margin: 20px auto;
+            margin: 40px auto;
             max-width: 1400px;
             background: #fff;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
 
         .header {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            flex-direction: column;
             border-bottom: 1px solid #ddd;
             padding-bottom: 15px;
-            margin-bottom: 15px;
+            margin-bottom: 25px;
         }
 
         .header h2 {
             margin: 0;
             color: #3b4151;
+            font-size: 28px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 16px;
+            margin-top: 8px;
+            margin-bottom: 0;
         }
 
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
             display: flex;
-            align-items: center;
-            gap: 10px;
+            flex-direction: column;
+            gap: 8px;
         }
 
-        .form-group input[type="text"] {
-            padding: 8px;
+        .form-group label {
+            font-weight: bold;
+            color: #444;
+        }
+
+        .form-group input[type="password"] {
+            padding: 10px;
             border: 1px solid #ccc;
             border-radius: 4px;
-            width: 300px;
+            width: 350px;
+            font-size: 14px;
+        }
+
+        .actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        input[type="file"] {
+            padding: 8px;
+            border: 1px dashed #aaa;
+            background: #fafafa;
+            border-radius: 4px;
+            cursor: pointer;
         }
 
         .btn {
-            padding: 8px 16px;
+            padding: 10px 20px;
             border: none;
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
             background: #61affe;
             color: white;
             font-weight: bold;
+            font-size: 15px;
+            transition: background 0.2s;
         }
 
         .btn:hover {
@@ -72,23 +100,31 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
+            margin-top: 30px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
 
         th,
         td {
-            border: 1px solid #ddd;
-            padding: 10px;
+            border: 1px solid #eee;
+            padding: 12px 15px;
             text-align: left;
         }
 
         th {
-            background: #f4f4f4;
+            background: #f8f9fa;
             color: #3b4151;
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background-color: #fcfcfc;
         }
 
         .call-btn {
             background: #49cc90;
+            padding: 8px 16px;
+            font-size: 14px;
         }
 
         .call-btn:hover {
@@ -98,10 +134,19 @@
         #status {
             color: #555;
             font-style: italic;
+            margin-left: 10px;
         }
 
-        #swagger-ui {
-            margin-top: 40px;
+        .nav-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #61affe;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .nav-link:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
@@ -109,18 +154,22 @@
 <body>
     <div class="custom-lead-ui">
         <div class="header">
-            <h2>AI Lead Extraction</h2>
-            <div>Extract leads from handwritten notes or screenshots and start mock calls directly.</div>
+            <h2>AI Lead Extraction Tool</h2>
+            <p>Extract leads from handwritten notes or screenshots and start mock calls directly.</p>
         </div>
 
         <div class="form-group">
+            <label for="apiKey">Mock Call Authorization:</label>
             <input type="password" id="apiKey" placeholder="Enter User API Key to enable calls..." />
         </div>
 
         <div class="form-group">
-            <input type="file" id="leadImage" accept="image/*">
-            <button id="uploadBtn" class="btn" onclick="extractLeads()">Upload & Extract</button>
-            <span id="status"></span>
+            <label for="leadImage">Upload Source Material:</label>
+            <div class="actions">
+                <input type="file" id="leadImage" accept="image/*">
+                <button id="uploadBtn" class="btn" onclick="extractLeads()">Extract Leads</button>
+                <span id="status"></span>
+            </div>
         </div>
 
         <table id="leadsTable" style="display: none;">
@@ -134,33 +183,11 @@
             <tbody id="leadsBody">
             </tbody>
         </table>
+
+        <a href="/docs" class="nav-link">&larr; Back to API Documentation</a>
     </div>
 
-    <!-- Swagger UI Div -->
-    <div id="swagger-ui"></div>
-
-    <!-- Swagger UI JS bundles -->
-    <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.9.0/swagger-ui-bundle.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.9.0/swagger-ui-standalone-preset.js"></script>
     <script>
-        // Initialize Swagger UI
-        window.onload = function () {
-            window.ui = SwaggerUIBundle({
-                url: "{{ openapi_url }}",
-                dom_id: '#swagger-ui',
-                deepLinking: true,
-                presets: [
-                    SwaggerUIBundle.presets.apis,
-                    SwaggerUIStandalonePreset
-                ],
-                plugins: [
-                    SwaggerUIBundle.plugins.DownloadUrl
-                ],
-                layout: "BaseLayout"
-            });
-        };
-
-        // Lead Extraction Logic
         async function extractLeads() {
             const fileInput = document.getElementById('leadImage');
             const statusEl = document.getElementById('status');
