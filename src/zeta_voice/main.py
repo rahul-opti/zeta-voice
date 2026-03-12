@@ -41,16 +41,26 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     print("Application shutting down.")
 
 
-app = FastAPI(title="Zeta Voice - Twilio Voice Agent", lifespan=lifespan, docs_url=None)
+from zeta_voice.conversation.runner import VoiceName
+from zeta_voice.settings import settings
+
+app = FastAPI(title="Zeta Voice - Twilio Voice Agent", lifespan=lifespan)
 app.include_router(app_router)
 app.include_router(lead_extraction_router)
 
 templates_dir = Path(__file__).parent / "templates"
 templates = Jinja2Templates(directory=str(templates_dir))
 
-@app.get("/docs", include_in_schema=False, response_class=HTMLResponse)
-async def custom_docs(request: Request):
-    return templates.TemplateResponse("docs.html", {"request": request, "title": app.title, "openapi_url": app.openapi_url})
+@app.get("/lead-call", include_in_schema=False, response_class=HTMLResponse)
+async def lead_call_ui(request: Request):
+    voices = [v.value for v in VoiceName]
+    user_api_key = settings.auth.USER_API_KEY.get_secret_value() if hasattr(settings.auth.USER_API_KEY, 'get_secret_value') else settings.auth.USER_API_KEY
+    
+    handoff_number = ""
+    if settings.telephony.TWILIO_PHONE_NUMBERS and len(settings.telephony.TWILIO_PHONE_NUMBERS) > 0:
+        handoff_number = settings.telephony.TWILIO_PHONE_NUMBERS[0]
+        
+    return templates.TemplateResponse("lead_call.html", {"request": request, "user_api_key": user_api_key, "voices": voices, "handoff_number": handoff_number})
 
 admin_app = FastAPI(title="Zeta Voice - Admin", dependencies=[Depends(admin_api_key_auth)])
 admin_app.include_router(admin_router)
