@@ -140,7 +140,7 @@ class ElevenLabsTTSSettings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
-    TTS_MODEL: str = "eleven_multilingual_v2"
+    TTS_MODEL: str = "eleven_flash_v2_5"
     TTS_VOICE_FEMALE: str = "Hh0rE70WfnSFN80K8uJC"
     TTS_VOICE_MALE: str = "uFIXVu9mmnDZ7dTKCBTX"
     ELEVENLABS_API_KEY: str
