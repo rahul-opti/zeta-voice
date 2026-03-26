@@ -1,7 +1,7 @@
 {
     "name": "Eve",
     "description": "High stability + medium-low similarity.",
-    "stability": 0.45,
+    "stability": 0.95,
     "similarity_boost": 0.75,
     "style": 0.75,
     "use_speaker_boost": true,

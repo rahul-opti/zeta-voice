@@ -1,262 +1,632 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
-    <title>Zeta Voice - Lead Extraction</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RAi — AI Lead Extraction Tool</title>
+    <meta name="description" content="Extract leads from handwritten notes or screenshots and start AI-powered calls directly." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <style>
+        /* ─── Design Tokens ─────────────────────────────────── */
+        :root {
+            --primary:     #1B3022;
+            --primary-lt:  #274a33;
+            --secondary:   #849683;
+            --tertiary:    #D4AF37;
+            --tertiary-dk: #b8961f;
+            --neutral:     #F8FAF8;
+            --neutral-dk:  #edf0ed;
+            --white:       #ffffff;
+            --text-main:   #1e2420;
+            --text-muted:  #5a6b5e;
+            --border:      #cad5cb;
+            --shadow-sm:   0 1px 3px rgba(27,48,34,.08);
+            --shadow-md:   0 4px 16px rgba(27,48,34,.12);
+            --shadow-lg:   0 8px 32px rgba(27,48,34,.16);
+            --radius-sm:   6px;
+            --radius-md:   10px;
+            --radius-lg:   16px;
+            --transition:  0.2s ease;
+        }
+
+        /* ─── Reset & Base ──────────────────────────────────── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
         body {
-            margin: 0;
-            padding: 0;
-            font-family: sans-serif;
-            background-color: #fafafa;
-        }
-
-        .custom-lead-ui {
-            padding: 20px;
-            margin: 40px auto;
-            max-width: 1400px;
-            background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-
-        .header {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--neutral);
+            color: var(--text-main);
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 15px;
-            margin-bottom: 25px;
         }
 
-        .header h2 {
-            margin: 0;
-            color: #3b4151;
-            font-size: 28px;
+        /* ─── Navbar ────────────────────────────────────────── */
+        .navbar {
+            background: var(--primary);
+            padding: 0 32px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow-md);
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
 
-        .header p {
-            color: #666;
-            font-size: 16px;
-            margin-top: 8px;
-            margin-bottom: 0;
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            text-decoration: none;
         }
 
+        .navbar-logo {
+            height: 38px;
+            width: auto;
+            filter: brightness(0) invert(1);
+        }
+
+        .navbar-divider {
+            height: 28px;
+            width: 1px;
+            background: rgba(255,255,255,.25);
+        }
+
+        .navbar-title {
+            color: rgba(255,255,255,.85);
+            font-size: 14px;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+        }
+
+        .navbar-badge {
+            background: var(--tertiary);
+            color: var(--primary);
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 9px;
+            border-radius: 99px;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        /* ─── Page Layout ───────────────────────────────────── */
+        .page-wrapper {
+            flex: 1;
+            padding: 40px 24px 60px;
+            max-width: 1120px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* ─── Page Header ───────────────────────────────────── */
+        .page-header {
+            margin-bottom: 32px;
+        }
+
+        .page-header h1 {
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--primary);
+            letter-spacing: -0.02em;
+        }
+
+        .page-header p {
+            margin-top: 6px;
+            color: var(--text-muted);
+            font-size: 15px;
+        }
+
+        /* ─── Card ──────────────────────────────────────────── */
+        .card {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--neutral-dk);
+            padding: 32px;
+            margin-bottom: 24px;
+            animation: fadeUp 0.35s ease both;
+        }
+
+        .card-title {
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--secondary);
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--neutral-dk);
+        }
+
+        /* ─── Form Elements ─────────────────────────────────── */
         .form-row {
             display: flex;
             gap: 20px;
-            margin-bottom: 20px;
             flex-wrap: wrap;
         }
 
         .form-group {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 7px;
             flex: 1;
-            min-width: 300px;
+            min-width: 260px;
         }
 
         .form-group label {
-            font-weight: bold;
-            color: #444;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-main);
         }
 
-        .form-group input[type="password"],
         .form-group input[type="text"],
+        .form-group input[type="password"],
         .form-group select {
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            width: 100%;
-            box-sizing: border-box;
+            padding: 10px 14px;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-family: inherit;
             font-size: 14px;
+            color: var(--text-main);
+            background: var(--neutral);
+            width: 100%;
+            outline: none;
+            transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
+            appearance: none;
+            -webkit-appearance: none;
         }
 
-        .actions {
+        .form-group select {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23849683' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            padding-right: 38px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: var(--primary);
+            background: var(--white);
+            box-shadow: 0 0 0 3px rgba(27,48,34,.1);
+        }
+
+        .form-group input::placeholder {
+            color: var(--border);
+        }
+
+        /* ─── Upload Zone ───────────────────────────────────── */
+        .upload-zone {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius-md);
+            padding: 24px 20px;
             display: flex;
             align-items: center;
-            gap: 15px;
-            margin-top: 15px;
-        }
-
-        input[type="file"] {
-            padding: 8px;
-            border: 1px dashed #aaa;
-            background: #fafafa;
-            border-radius: 4px;
+            gap: 20px;
+            flex-wrap: wrap;
+            background: var(--neutral);
+            transition: border-color var(--transition), background var(--transition);
             cursor: pointer;
         }
 
+        .upload-zone:hover {
+            border-color: var(--secondary);
+            background: var(--white);
+        }
+
+        .upload-icon {
+            width: 44px;
+            height: 44px;
+            background: var(--neutral-dk);
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .upload-icon svg { color: var(--secondary); }
+
+        .upload-label-group {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .upload-label-group strong {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .upload-label-group span {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        #leadImage {
+            display: none;
+        }
+
+        .file-trigger {
+            display: inline-block;
+            padding: 8px 16px;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-main);
+            cursor: pointer;
+            background: var(--white);
+            transition: border-color var(--transition), background var(--transition);
+            user-select: none;
+        }
+
+        .file-trigger:hover {
+            border-color: var(--primary);
+            background: var(--neutral);
+        }
+
+        #fileNameDisplay {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* ─── Buttons ───────────────────────────────────────── */
         .btn {
-            padding: 10px 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 11px 22px;
             border: none;
-            border-radius: 6px;
+            border-radius: var(--radius-sm);
             cursor: pointer;
-            background: #61affe;
-            color: white;
-            font-weight: bold;
-            font-size: 15px;
-            transition: background 0.2s;
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 14px;
+            letter-spacing: 0.01em;
+            transition: background var(--transition), transform var(--transition), box-shadow var(--transition);
+            white-space: nowrap;
         }
 
-        .btn:hover {
-            background: #499ddc;
+        .btn-primary {
+            background: var(--tertiary);
+            color: var(--primary);
+            box-shadow: 0 2px 8px rgba(212,175,55,.3);
         }
 
-        .btn[disabled] {
-            opacity: 0.6;
+        .btn-primary:hover:not(:disabled) {
+            background: var(--tertiary-dk);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 14px rgba(212,175,55,.4);
+        }
+
+        .btn-dark {
+            background: var(--primary);
+            color: var(--white);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn-dark:hover:not(:disabled) {
+            background: var(--primary-lt);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 14px rgba(27,48,34,.25);
+        }
+
+        .btn:disabled {
+            opacity: 0.55;
             cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        .btn-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        /* ─── Status Pill ───────────────────────────────────── */
+        #status {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--secondary);
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        #status.loading::before {
+            content: '';
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid var(--neutral-dk);
+            border-top-color: var(--secondary);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+
+        /* ─── Table ─────────────────────────────────────────── */
+        .table-wrapper {
+            display: none;
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            border: 1px solid var(--neutral-dk);
+            box-shadow: var(--shadow-sm);
+            animation: fadeUp 0.3s ease both;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 30px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
 
-        th,
-        td {
-            border: 1px solid #eee;
-            padding: 12px 15px;
+        thead th {
+            background: var(--primary);
+            color: rgba(255,255,255,.9);
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            padding: 13px 18px;
             text-align: left;
         }
 
-        th {
-            background: #f8f9fa;
-            color: #3b4151;
-            font-weight: 600;
+        tbody td {
+            padding: 13px 18px;
+            font-size: 14px;
+            border-bottom: 1px solid var(--neutral-dk);
+            color: var(--text-main);
         }
 
-        tr:hover {
-            background-color: #fcfcfc;
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        tbody tr:nth-child(even) {
+            background: var(--neutral);
+        }
+
+        tbody tr:hover {
+            background: rgba(27,48,34,.04);
         }
 
         .call-btn {
-            background: #49cc90;
-            padding: 8px 16px;
-            font-size: 14px;
+            padding: 7px 16px;
+            font-size: 13px;
         }
 
-        .call-btn:hover {
-            background: #3ba475;
-        }
-
-        #status {
-            color: #555;
-            font-style: italic;
-            margin-left: 10px;
-        }
-
+        /* ─── Payload Block ─────────────────────────────────── */
         #payloadDisplayContainer {
-            margin-top: 30px;
             display: none;
-            background: #2d2d2d;
-            color: #ccc;
-            padding: 15px;
-            border-radius: 6px;
-            overflow-x: auto;
+            background: #111c15;
+            border-radius: var(--radius-md);
+            padding: 20px 22px;
+            border: 1px solid rgba(255,255,255,.07);
+            animation: fadeUp 0.3s ease both;
         }
 
         #payloadDisplayContainer h3 {
-            margin-top: 0;
-            color: #fff;
-            font-size: 16px;
-            border-bottom: 1px solid #444;
-            padding-bottom: 8px;
-            margin-bottom: 10px;
+            color: var(--secondary);
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,.08);
         }
 
         pre {
-            font-family: monospace;
+            font-family: 'SF Mono', 'Fira Code', monospace;
             white-space: pre-wrap;
             word-wrap: break-word;
             margin: 0;
             font-size: 13px;
+            color: #a8d5b5;
+            line-height: 1.6;
         }
 
+        /* ─── Nav Link ──────────────────────────────────────── */
         .nav-link {
-            display: inline-block;
-            margin-top: 20px;
-            color: #61affe;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 28px;
+            color: var(--secondary);
             text-decoration: none;
-            font-weight: bold;
+            font-size: 13px;
+            font-weight: 500;
+            transition: color var(--transition);
         }
 
         .nav-link:hover {
-            text-decoration: underline;
+            color: var(--primary);
+        }
+
+        /* ─── Footer ────────────────────────────────────────── */
+        .page-footer {
+            background: var(--white);
+            border-top: 1px solid var(--neutral-dk);
+            text-align: center;
+            padding: 16px;
+            font-size: 12px;
+            color: var(--secondary);
+        }
+
+        .page-footer span {
+            color: var(--tertiary);
+        }
+
+        /* ─── Animations ────────────────────────────────────── */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* ─── Responsive ────────────────────────────────────── */
+        @media (max-width: 640px) {
+            .navbar { padding: 0 16px; }
+            .page-wrapper { padding: 24px 16px 48px; }
+            .card { padding: 20px; }
         }
     </style>
 </head>
 
 <body>
-    <div class="custom-lead-ui">
-        <div class="header">
-            <h2>AI Lead Extraction Tool</h2>
-            <p>Extract leads from handwritten notes or screenshots and start calls directly.</p>
+
+    <!-- ── Navbar ── -->
+    <nav class="navbar">
+        <a href="/" class="navbar-brand">
+            <!-- RAi Logo (inline SVG, inverted white via CSS filter) -->
+            <svg class="navbar-logo" width="119" height="70" viewBox="0 0 119 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M6 7.83699C6 6.2704 7.28158 4.90402 8.82559 5.169C9.15621 5.2247 9.15621 5.2247 9.49351 5.28153C9.72791 5.32241 9.96232 5.36329 10.2038 5.40541C10.4535 5.44795 10.7033 5.49036 10.953 5.53266C11.4802 5.62219 12.0073 5.71252 12.5342 5.80353C13.3596 5.9461 14.1854 6.08688 15.0112 6.2273C15.8267 6.36603 16.6421 6.5048 17.4575 6.6442C19.2579 6.95192 21.0596 7.25122 22.8636 7.54005C25.3809 7.94603 27.8943 8.37086 30.4073 8.79871C30.8608 8.87588 31.3144 8.95289 31.7679 9.02973C32.4022 9.13726 33.0363 9.24548 33.6705 9.35391C33.8637 9.38657 34.0569 9.41923 34.256 9.45289C34.4329 9.48329 34.6097 9.51369 34.7919 9.54501C34.9469 9.57143 35.1018 9.59785 35.2615 9.62507C35.7281 9.72113 36 10.1752 36 10.6516C36 27.5454 36 44.4459 36 61.7927C36 63.7215 34.6241 65.3794 32.7256 65.7204C31.6726 65.9095 30.6189 66.0941 29.5625 66.2702C29.3108 66.3124 29.0592 66.3546 28.8076 66.3969C28.1544 66.5064 27.5012 66.6156 26.8479 66.7247C26.3275 66.8117 25.807 66.8989 25.2866 66.9862C21.9497 67.5458 18.6116 68.099 15.2727 68.6482C14.1481 68.8334 13.0235 69.0188 11.8991 69.2046C11.5949 69.2548 11.2908 69.3049 10.9866 69.355C10.5327 69.4297 10.0788 69.5047 9.625 69.5798C9.48962 69.602 9.35424 69.6242 9.21476 69.6471C8.51099 69.7613 8.51099 69.7613 7.81889 69.923C6.82933 70.1096 6 69.1754 6 68.1684C6 48.2474 6 28.3105 6 7.83699ZM10.3602 8.74934C9.96133 8.67848 9.63636 9.01776 9.63636 9.42286C9.63636 27.1887 9.63636 44.9609 9.63636 63.2126C9.63636 64.7795 10.9814 66.0155 12.5325 65.7939C12.8208 65.7449 12.8208 65.7449 13.1148 65.6949C13.3181 65.6596 13.5214 65.6243 13.7308 65.588C13.9484 65.5508 14.166 65.5136 14.3902 65.4754C14.9763 65.3752 15.5622 65.2745 16.1481 65.1735C17.1291 65.0048 18.1104 64.8378 19.0916 64.6706C19.3396 64.6283 19.5876 64.586 19.8355 64.5437C22.2257 64.1356 24.6179 63.7386 27.0114 63.3477C27.1793 63.3203 27.3473 63.2928 27.5204 63.2646C28.834 63.05 28.834 63.05 29.35 62.9661C31.1956 62.6657 32.5455 61.065 32.5455 59.1952C32.5455 44.8844 32.5455 30.5489 32.5455 15.861C32.5455 13.9433 31.1854 12.2903 29.2995 11.9423C27.8171 11.6687 26.3336 11.4086 24.838 11.1757C20.9169 10.5645 17.0071 9.90009 13.0986 9.22357C12.8943 9.1883 12.69 9.15303 12.4795 9.11669C12.0944 9.0502 11.7095 8.98343 11.3245 8.91636C11.1547 8.88702 10.9848 8.85769 10.8098 8.82746C10.6615 8.80168 10.5131 8.7759 10.3602 8.74934Z" fill="currentColor"/>
+                <circle cx="26" cy="38" r="3" fill="currentColor"/>
+                <rect x="57" y="19" width="2.8" height="30" rx="1.4" fill="currentColor"/>
+                <path d="M82.9988 58.7695C82.7908 59.1337 79.7426 59.0433 79.2962 58.6599C78.9513 58.3642 76.7045 55.6288 67.4761 44.2708L66.3934 42.9364C65.9011 42.3296 65.6449 41.5651 65.6722 40.7842C65.7313 39.0909 67.0864 37.7297 68.7795 37.663L70.0881 37.6115C75.4542 37.4034 76.6918 37.0146 78.292 35.0458C79.5752 33.4713 79.9353 32.3076 79.948 29.7036C79.9556 27.7102 79.8618 27.179 79.2937 26.007C78.4949 24.3559 77.5337 23.3291 76.1745 22.6664C75.2767 22.2311 74.1153 22.1571 66.1574 22.0367L58.6078 21.9218C57.7899 21.9094 57.1214 21.2654 57.0786 20.4485C57.036 19.6636 57.6646 19.0056 58.4506 19.0123L66.3476 19.0794L73.5194 19.1424C74.9487 19.155 76.3538 19.5129 77.6149 20.1856C79.8922 21.4014 81.1196 22.7623 82.2202 25.2896C82.9354 26.9353 83.0089 27.3433 82.9937 29.7036C82.9709 33.3317 82.3521 34.9938 80.128 37.3952C77.7949 39.9143 76.4965 40.4291 72.0535 40.5934C70.2048 40.6646 68.6934 40.8042 68.6934 40.911C68.6934 41.0151 71.9419 45.0238 75.9133 49.8183C79.8846 54.6129 83.0723 58.6408 82.9988 58.7695ZM59.7566 45.1114L59.6962 57.7111C59.6931 58.3622 59.1889 58.9011 58.5393 58.9475C57.9079 58.9913 57.3069 58.9392 57.2079 58.8325C57.109 58.7257 57.0279 51.82 57.0279 43.4849V35.7536C57.0279 31.6561 60.3495 28.3345 64.447 28.3345H70.7448C71.5733 28.3345 72.2323 29.0293 72.1885 29.8566C72.1482 30.6176 71.5242 31.2167 70.7622 31.2259L66.1176 31.2817C62.6239 31.3238 59.8091 34.159 59.7924 37.6529L59.7566 45.1114Z" fill="currentColor"/>
+                <path d="M92.16 51.51H103.36L97.76 37.125L92.16 51.51ZM104.2 53.75H91.355L89.325 59H86.49L96.15 34.5H99.37L109.03 59H106.23L104.2 53.75ZM115.116 41.57V59H112.491V41.57H115.116ZM111.896 35.725C111.896 34.605 112.701 33.765 113.786 33.765C114.871 33.765 115.711 34.605 115.711 35.725C115.711 36.845 114.871 37.65 113.786 37.65C112.701 37.65 111.896 36.845 111.896 35.725Z" fill="currentColor"/>
+                <rect width="3" height="69" rx="1.5" transform="matrix(-1 0 0 1 3 1)" fill="currentColor"/>
+                <rect y="3" width="3" height="41" rx="1.5" transform="rotate(-90 0 3)" fill="currentColor"/>
+                <rect x="39" y="34" width="3" height="10" rx="1.5" fill="currentColor"/>
+                <rect x="45" y="29" width="3" height="20" rx="1.5" fill="currentColor"/>
+                <rect x="51" y="24" width="3" height="30" rx="1.5" fill="currentColor"/>
+            </svg>
+            <div class="navbar-divider"></div>
+            <span class="navbar-title">Lead Extraction Tool</span>
+        </a>
+        <span class="navbar-badge">AI Powered</span>
+    </nav>
+
+    <!-- ── Page Body ── -->
+    <div class="page-wrapper">
+
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1>AI Lead Extraction Tool</h1>
+            <p>Extract leads from handwritten notes or screenshots and launch calls directly.</p>
         </div>
 
-        <div class="form-row">
-            <div class="form-group" style="display: none;">
-                <label for="apiKey">Mock Call Authorization (Auto-filled from settings):</label>
-                <input type="password" id="apiKey" value="{{ user_api_key }}"
-                    placeholder="Enter User API Key to enable calls..." />
-            </div>
-            <div class="form-group">
-                <label for="voiceName">Agent Voice:</label>
-                <select id="voiceName">
-                    {% for voice in voices %}
-                    <option value="{{ voice }}">{{ voice }}</option>
-                    {% endfor %}
-                </select>
+        <!-- Hidden API Key -->
+        <input type="password" id="apiKey" value="{{ user_api_key }}" style="display:none;" />
+
+        <!-- ── Card 1: Configuration ── -->
+        <div class="card">
+            <div class="card-title">Call Configuration</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="voiceName">Agent Voice</label>
+                    <select id="voiceName">
+                        {% for voice in voices %}
+                        <option value="{{ voice }}">{{ voice }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="funeralHomeName">Funeral Home Name</label>
+                    <input type="text" id="funeralHomeName" value="Lakeview funeral home" placeholder="e.g. Lakeview Funeral Home" />
+                </div>
+                <div class="form-group">
+                    <label for="funeralHomeAddress">Funeral Home Address</label>
+                    <input type="text" id="funeralHomeAddress" value="439 Panama Lane, California" placeholder="e.g. 439 Panama Lane, CA" />
+                </div>
             </div>
         </div>
 
-        <div class="form-row">
-            <div class="form-group">
-                <label for="funeralHomeName">Funeral Home Name:</label>
-                <input type="text" id="funeralHomeName" value="Lakeview funeral home" />
-            </div>
-            <div class="form-group">
-                <label for="funeralHomeAddress">Funeral Home Address:</label>
-                <input type="text" id="funeralHomeAddress" value="439 Panama Lane, California" />
-            </div>
-        </div>
+        <!-- ── Card 2: Upload ── -->
+        <div class="card">
+            <div class="card-title">Source Material</div>
+            <label class="upload-zone" for="leadImage">
+                <div class="upload-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                </div>
+                <div class="upload-label-group">
+                    <strong>Upload an image of your lead sheet</strong>
+                    <span>Handwritten notes, screenshots — PNG, JPG, WEBP supported</span>
+                    <span id="fileNameDisplay">No file chosen</span>
+                </div>
+                <input type="file" id="leadImage" accept="image/*" />
+            </label>
 
-        <div class="form-group" style="margin-top: 10px; border-top: 1px solid #eee; padding-top: 20px;">
-            <label for="leadImage">Upload Source Material:</label>
-            <div class="actions">
-                <input type="file" id="leadImage" accept="image/*">
-                <button id="uploadBtn" class="btn" onclick="extractLeads()">Extract Leads</button>
+            <div class="btn-row">
+                <button id="uploadBtn" class="btn btn-primary" onclick="extractLeads()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    Extract Leads
+                </button>
                 <span id="status"></span>
             </div>
         </div>
 
-        <table id="leadsTable" style="display: none;">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Phone</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody id="leadsBody">
-            </tbody>
-        </table>
+        <!-- ── Leads Table ── -->
+        <div class="table-wrapper" id="tableWrapper">
+            <table id="leadsTable">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Phone</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="leadsBody"></tbody>
+            </table>
+        </div>
 
+        <!-- ── Payload Debug ── -->
         <div id="payloadDisplayContainer">
-            <h3>Payload Sent to /start_call</h3>
+            <h3>Payload — POST /start_call</h3>
             <pre id="payloadDisplay"></pre>
         </div>
 
-        <a href="/docs" class="nav-link">&larr; Back to API Documentation</a>
+        <a href="/docs" class="nav-link">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+            </svg>
+            Back to API Documentation
+        </a>
     </div>
 
+    <!-- ── Footer ── -->
+    <footer class="page-footer">
+        Powered by <span>RAi</span> · AI Lead Extraction Platform
+    </footer>
+
     <script>
+        // Update file name display
+        document.getElementById('leadImage').addEventListener('change', function () {
+            const display = document.getElementById('fileNameDisplay');
+            display.textContent = this.files.length ? this.files[0].name : 'No file chosen';
+        });
+
         async function extractLeads() {
             const fileInput = document.getElementById('leadImage');
             const statusEl = document.getElementById('status');
-            const table = document.getElementById('leadsTable');
+            const tableWrapper = document.getElementById('tableWrapper');
             const tbody = document.getElementById('leadsBody');
             const payloadContainer = document.getElementById('payloadDisplayContainer');
 
@@ -270,8 +640,9 @@
             formData.append('file', file);
 
             document.getElementById('uploadBtn').disabled = true;
-            statusEl.innerText = 'Extracting leads using AI...';
-            table.style.display = 'none';
+            statusEl.className = 'loading';
+            statusEl.innerText = 'Extracting leads using AI…';
+            tableWrapper.style.display = 'none';
             payloadContainer.style.display = 'none';
             tbody.innerHTML = '';
 
@@ -281,15 +652,14 @@
                     body: formData
                 });
 
-                if (!response.ok) {
-                    throw new Error(`Server returned ${response.status}`);
-                }
+                if (!response.ok) throw new Error(`Server returned ${response.status}`);
 
                 const data = await response.json();
 
                 if (data.leads && data.leads.length > 0) {
-                    statusEl.innerText = `Found ${data.leads.length} lead(s).`;
-                    table.style.display = 'table';
+                    statusEl.className = '';
+                    statusEl.innerText = `✓ Found ${data.leads.length} lead(s)`;
+                    tableWrapper.style.display = 'block';
 
                     data.leads.forEach(lead => {
                         const tr = document.createElement('tr');
@@ -302,12 +672,14 @@
 
                         if (lead.phone) {
                             const callBtn = document.createElement('button');
-                            callBtn.className = 'btn call-btn';
-                            callBtn.innerText = 'Call Lead';
+                            callBtn.className = 'btn btn-dark call-btn';
+                            callBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.44 2 2 0 0 1 3.58 1.25h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.8a16 16 0 0 0 6 6l.92-.92a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 16z"/></svg> Call Lead`;
                             callBtn.onclick = () => makeCall(lead.phone, lead.name, callBtn);
                             actionTd.appendChild(callBtn);
                         } else {
                             actionTd.innerText = 'No phone number';
+                            actionTd.style.color = 'var(--secondary)';
+                            actionTd.style.fontSize = '13px';
                         }
 
                         tr.appendChild(nameTd);
@@ -316,11 +688,13 @@
                         tbody.appendChild(tr);
                     });
                 } else {
+                    statusEl.className = '';
                     statusEl.innerText = 'No leads found in the image.';
                 }
             } catch (err) {
                 console.error(err);
-                statusEl.innerText = 'Extraction failed. Please check backend logs.';
+                statusEl.className = '';
+                statusEl.innerText = 'Extraction failed — check backend logs.';
             } finally {
                 document.getElementById('uploadBtn').disabled = false;
             }
@@ -333,26 +707,23 @@
             const voiceName = document.getElementById('voiceName').value;
 
             if (!apiKey) {
-                alert('Please enter your User API Key in the field above to make calls.');
+                alert('User API key is missing — please check your settings.');
                 return;
             }
 
             btnElement.disabled = true;
-            const originalText = btnElement.innerText;
-            btnElement.innerText = 'Initiating...';
+            const originalHTML = btnElement.innerHTML;
+            btnElement.innerHTML = 'Initiating…';
 
-            // Build the payload mapping exactly to StartCallRequest
             const payload = {
                 to_number: phone,
-                handoff_number: '{{ handoff_number }}', // injected from backend Settings
+                handoff_number: '{{ handoff_number }}',
                 funeral_home_name: funeralHomeName || undefined,
                 funeral_home_address: funeralHomeAddress || undefined,
                 user_name: name && name !== 'Unknown' ? name : undefined,
-                // lead_id or user_id is required based on ERP settings, provide a dummy user_id for mock calls
                 user_id: "mock_lead_123"
             };
 
-            // Display payload
             const payloadContainer = document.getElementById('payloadDisplayContainer');
             const payloadDisplay = document.getElementById('payloadDisplay');
             payloadDisplay.innerText = "POST /start_call?record_call=true&voice_name=" + encodeURIComponent(voiceName) + "\n\n" + JSON.stringify(payload, null, 2);
@@ -360,7 +731,6 @@
 
             try {
                 const url = `/start_call?record_call=true&voice_name=${encodeURIComponent(voiceName)}`;
-
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: {
@@ -371,20 +741,20 @@
                 });
 
                 if (response.ok) {
-                    btnElement.innerText = 'Calling...';
+                    btnElement.innerHTML = '📞 Calling…';
                     setTimeout(() => {
-                        btnElement.innerText = originalText;
+                        btnElement.innerHTML = originalHTML;
                         btnElement.disabled = false;
                     }, 5000);
                 } else {
                     const text = await response.text();
-                    btnElement.innerText = 'Failed';
+                    btnElement.innerHTML = 'Failed';
                     alert(`Call failed with status ${response.status}: ${text}`);
                     btnElement.disabled = false;
                 }
             } catch (err) {
                 console.error(err);
-                btnElement.innerText = 'Error';
+                btnElement.innerHTML = 'Error';
                 alert('Call encountered an error');
                 btnElement.disabled = false;
             }
