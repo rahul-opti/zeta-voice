@@ -680,11 +680,47 @@ class QuestionFlow(Flow):
             await sleep(1.5)  # Simulate a brief pause for realism
         return self.chatbot_response
 
+    def normalize_address_for_tts(address: str) -> str:
+        """
+        Convert leading house numbers in an address into a digit-by-digit
+        spoken form for better TTS output.
+
+        Example:
+            "2052 Howard Road, Camarillo, California"
+            -> "two oh five two Howard Road, Camarillo, California"
+        """
+        if not address:
+            return address
+
+        address = address.strip()
+
+        # Match leading house number only, e.g. "2052 Howard Road"
+        match = re.match(r"^(\d+)(\b.*)$", address)
+        if not match:
+            return address
+
+        street_number, rest = match.groups()
+        spoken_number = " ".join(DIGIT_WORDS.get(ch, ch) for ch in street_number)
+
+        return f"{spoken_number}{rest}"
+
     def _get_replacements(self) -> dict[str, str]:
         """Get replacements for placeholders in utterances."""
+        DIGIT_WORDS = {
+            "0": "oh",
+            "1": "one",
+            "2": "two",
+            "3": "three",
+            "4": "four",
+            "5": "five",
+            "6": "six",
+            "7": "seven",
+            "8": "eight",
+            "9": "nine",
+        }
         replacements = {}
         if self.funeral_home_address:
-            replacements["ADDRESS"] = cast(str, self.funeral_home_address)
+            replacements["ADDRESS"] = normalize_address_for_tts(cast(str, self.funeral_home_address))
         return replacements
 
     def is_flow_complete(self) -> bool:
