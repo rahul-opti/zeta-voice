@@ -690,6 +690,19 @@ class QuestionFlow(Flow):
             "2052 Howard Road, Camarillo, California"
             -> "two oh five two Howard Road, Camarillo, California"
         """
+        DIGIT_WORDS = {
+            "0": "oh",
+            "1": "one",
+            "2": "two",
+            "3": "three",
+            "4": "four",
+            "5": "five",
+            "6": "six",
+            "7": "seven",
+            "8": "eight",
+            "9": "nine",
+        }
+        
         if not address:
             return address
 
@@ -707,18 +720,6 @@ class QuestionFlow(Flow):
 
     def _get_replacements(self) -> dict[str, str]:
         """Get replacements for placeholders in utterances."""
-        DIGIT_WORDS = {
-            "0": "oh",
-            "1": "one",
-            "2": "two",
-            "3": "three",
-            "4": "four",
-            "5": "five",
-            "6": "six",
-            "7": "seven",
-            "8": "eight",
-            "9": "nine",
-        }
         replacements = {}
         if self.funeral_home_address:
             replacements["ADDRESS"] = self.normalize_address_for_tts(cast(str, self.funeral_home_address))
