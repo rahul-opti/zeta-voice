@@ -680,6 +680,7 @@ class QuestionFlow(Flow):
             await sleep(1.5)  # Simulate a brief pause for realism
         return self.chatbot_response
 
+    @staticmethod
     def normalize_address_for_tts(address: str) -> str:
         """
         Convert leading house numbers in an address into a digit-by-digit
