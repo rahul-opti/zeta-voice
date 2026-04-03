@@ -720,7 +720,7 @@ class QuestionFlow(Flow):
         }
         replacements = {}
         if self.funeral_home_address:
-            replacements["ADDRESS"] = normalize_address_for_tts(cast(str, self.funeral_home_address))
+            replacements["ADDRESS"] = self.normalize_address_for_tts(cast(str, self.funeral_home_address))
         return replacements
 
     def is_flow_complete(self) -> bool:
