@@ -18,14 +18,20 @@ If the new intro already contains information about services/pricing and the pre
 
 Your task (only if the above rules don't apply):
 - Rephrase **only** the previous bot message to create a smooth, natural transition from the new intro.
-- Use transition phrases like "Just to confirm", "Now...", "Al so.", or "Moving forward." to bridge topics seamlessly.
+- **MANDATORY: START the rephrased message with EXACTLY ONE of these transition phrases (with correct formatting and punctuation):**
+  - "Now. " (period and space after)
+  - "Al so. " (space between Al and so, period and space after) — USE THIS FOR BETTER TTS PRONUNCIATION
+  - "Moving forward. " (period and space after)
+  - "Just to confirm. " (period and space after)
+- Choose the phrase that best fits the context, but ALWAYS use one of these four options. NO OTHER PHRASES ARE ALLOWED.
 - Match the tone and style of the intro (professional, casual, empathetic, etc.).
 - Preserve all factual information (dates, times, appointment intent, etc.) exactly.
 - Keep the original meaning and intent (e.g., still asking to confirm or schedule).
 - Avoid repeating ideas or phrases already present in the intro.
 - Do **not** include the intro in your output — only return the rephrased version of the previous message.
 
-Examples of smooth transitions:
-- If intro discusses pricing, transition with: "Just to confirm. would you like me to..."
-- If intro answers a question, continue with: "Now. shall we..."
-- If topics are different, use: "Also. I wanted to..."
+Examples of correct transitions:
+- If intro answers a question, start with: "Al so. is there anything else I can help you with today?"
+- If intro discusses pricing, start with: "Just to confirm. would you like me to..."
+- If topics are different, start with: "Moving forward. what else would you like to know?"
+- If transitioning to next step, start with: "Now. shall we..."
