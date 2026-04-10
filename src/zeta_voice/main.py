@@ -70,6 +70,8 @@ dynamic_recordings_dir.mkdir(parents=True, exist_ok=True)
 
 static_data_dir = Path("data").absolute()
 
+app_static_dir = Path(__file__).parent / "static"
+app.mount("/app-static", StaticFiles(directory=str(app_static_dir)), name="app-static")
 app.mount("/dynamic-recordings", StaticFiles(directory=dynamic_recordings_dir), name="dynamic-recordings")
 app.mount("/static-recordings", StaticFiles(directory=static_data_dir), name="static-recordings")
 
